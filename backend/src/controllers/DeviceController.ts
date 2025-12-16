@@ -99,3 +99,31 @@ export async function deleteDevice(req: AuthenticatedRequest, res: Response): Pr
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 }
+
+export async function updateDevice(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+        const ownerId = req.user!.id;
+        const deviceId = req.params.id;
+        const { name, type } = req.body; // Solo permitimos actualizar nombre y tipo
+
+        const updatedDevice = await Device.findOneAndUpdate(
+            { _id: deviceId, owner: ownerId }, // Criterio de búsqueda (ID y Dueño)
+            { name, type }, // Datos a actualizar
+            { new: true, runValidators: true } // Opciones: devolver el doc nuevo y validar
+        ).populate('owner', 'email');
+
+        if (!updatedDevice) {
+            res.status(404).json({ message: 'Dispositivo no encontrado o no autorizado para actualizar.' });
+            return;
+        }
+
+        res.status(200).json({ 
+            message: 'Dispositivo actualizado exitosamente.',
+            device: updatedDevice 
+        });
+
+    } catch (error) {
+        console.error("Error al actualizar dispositivo:", error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+}

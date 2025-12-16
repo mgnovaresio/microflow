@@ -2,6 +2,7 @@
 import * as mqtt from 'mqtt';
 import Device from '../models/Device';
 import * as dotenv from 'dotenv';
+import Telemetry from '../models/Telemetry'; // Importar el modelo histórico
 dotenv.config();
 
 // Obtener la URL del broker desde las variables de entorno o Docker
@@ -43,27 +44,37 @@ async function handleIncomingMessage(topic: string, message: Buffer) {
     try {
         const payload = JSON.parse(message.toString());
         
-        // 1. Extraer el ID del dispositivo del tópico
-        // El tópico es 'devices/<DEVICE_ID>/telemetry'
         const parts = topic.split('/');
-        const deviceId = parts[1]; 
-        
-        // 2. RF3.2: Actualizar el estado del dispositivo en la BD
-        const updatedDevice = await Device.findOneAndUpdate( // <-- USAMOS FIND ONE AND UPDATE
-            { connectionId: deviceId }, // <-- ¡BUSCAMOS POR EL CAMPO connectionId!
+        const connectionId = parts[1]; // Este es el ID de conexión MQTT
+
+        // 1. Encontrar el dispositivo por connectionId
+        const device = await Device.findOne({ connectionId });
+
+        if (!device) {
+            console.warn(`[MQTT] Mensaje de dispositivo desconocido: ${connectionId}`);
+            return;
+        }
+
+        // 2. RF3.2: Actualizar el estado del dispositivo (Última actividad)
+        const updatedDevice = await Device.findOneAndUpdate( 
+            { _id: device._id }, // Ya tenemos el objeto, actualizamos por _id
             { 
                 status: 'online', 
                 lastActivity: new Date(),
-                // Aquí podrías guardar los datos (payload) en otra colección si fuera necesario
             },
             { new: true }
         );
 
-        if (updatedDevice) {
-            console.log(`[MQTT] Datos recibidos de ${updatedDevice.name} (${deviceId}). Tipo: ${payload.data}`);
-        } else {
-            console.warn(`[MQTT]  Mensaje de dispositivo desconocido: ${deviceId}`);
-        }
+        // 3. RF3.4: Guardar el dato histórico en la colección Telemetry
+        await Telemetry.create({
+            device: device._id, // Usamos el ID de MongoDB como referencia
+            data: payload.data, 
+            unit: payload.unit || 'unknown', // Suponemos que el payload trae 'unit'
+            timestamp: new Date(),
+        });
+        
+        console.log(`[MQTT] Datos recibidos de ${updatedDevice?.name} (${connectionId}). Tipo: ${payload.unit || 'Data'}. Histórico guardado.`);
+
 
     } catch (error) {
         console.error('Error al procesar mensaje MQTT:', error);

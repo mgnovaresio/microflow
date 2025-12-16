@@ -8,7 +8,7 @@ import {
     getMyDevices, 
     getDeviceById,
     deleteDevice,
-    // (Faltaría updateDevice)
+    updateDevice,
 } from '../controllers/DeviceController';
 
 const router = Router();
@@ -24,6 +24,7 @@ router.route('/')
 
 router.route('/:id')
     .get(restrictTo('admin', 'user'), getDeviceById) // Leer uno: Solo usuarios/admins logueados
+    .patch(restrictTo('admin', 'user'), updateDevice)
     .delete(restrictTo('admin', 'user'), deleteDevice); // Eliminar: Solo usuarios/admins logueados
 
 // Más adelante: router.patch('/:id', updateDevice);
