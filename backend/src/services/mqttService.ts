@@ -69,3 +69,29 @@ async function handleIncomingMessage(topic: string, message: Buffer) {
         console.error('Error al procesar mensaje MQTT:', error);
     }
 }
+
+// RF4.1: Función para publicar comandos
+export function publishCommand(deviceId: string, command: string, value: any): void {
+    if (!client || !client.connected) {
+        console.error('Cliente MQTT no conectado. No se puede enviar el comando.');
+        return;
+    }
+
+    // Tópico de Comando: devices/<ID>/command
+    const topic = `devices/${deviceId}/command`;
+    
+    // Payload del comando
+    const payload = JSON.stringify({
+        command, // Ej: 'ACTIVATE_RELAY'
+        value,   // Ej: true
+        timestamp: new Date().toISOString()
+    });
+
+    client.publish(topic, payload, { qos: 1, retain: false }, (err) => {
+        if (err) {
+            console.error(`Error al publicar comando a ${topic}:`, err);
+        } else {
+            console.log(`[MQTT] ⬇ Comando publicado a ${topic}: ${command}`);
+        }
+    });
+}

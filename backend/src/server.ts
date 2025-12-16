@@ -4,6 +4,7 @@ import * as dotenv from 'dotenv';
 import mongoose from 'mongoose'; 
 import authRoutes from './routes/authRoutes';
 import deviceRoutes from './routes/deviceRoutes';
+import commandRoutes from './routes/commandRoutes';
 import { connectMqttBroker } from './services/mqttService';
 
 dotenv.config(); // Carga las variables del archivo .env
@@ -43,6 +44,9 @@ async function connectDB() {
 
 // 4. Rutas de Dispositivos (Rf2) 
 app.use('/api/v1/devices', deviceRoutes);
+
+// Rutas de comandos(RF4)
+app.use('/api/v1/commands', commandRoutes);
 
 // 5. Manejo de Eventos (Inicia el Servidor SÓLO si la BD está lista)
 mongoose.connection.on('connected', () => {
